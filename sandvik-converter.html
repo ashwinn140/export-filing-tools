@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sandvik Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F3F5F6;
+    --surface: #FFFFFF;
+    --surface-sunken: #EAEEF0;
+    --ink: #16222B;
+    --ink-soft: #57666F;
+    --ink-faint: #8A98A0;
+    --accent: #2C6E76;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #E4EEEE;
+    --border: #D7DEE1;
+    --border-strong: #B9C4C8;
+    --mono-bg: #EEF2F2;
+    --warn-bg: #FBEFDD;
+    --warn-border: #E3C085;
+    --warn-ink: #7A4A0E;
+    --ok-bg: #E4F1E9;
+    --ok-ink: #275C41;
+    --danger: #A6402F;
+    --radius: 6px;
+    --shadow: 0 1px 2px rgba(22,34,43,0.06), 0 1px 1px rgba(22,34,43,0.04);
+    color-scheme: light dark;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #12181C;
+      --surface: #1A2226;
+      --surface-sunken: #161D21;
+      --ink: #E7EDEF;
+      --ink-soft: #9FB0B6;
+      --ink-faint: #6E7E84;
+      --accent: #57B4BC;
+      --accent-ink: #08191C;
+      --accent-soft: #1D2E30;
+      --border: #2A363B;
+      --border-strong: #3A484D;
+      --mono-bg: #131A1D;
+      --warn-bg: #372A13;
+      --warn-border: #6B4F1E;
+      --warn-ink: #E8C078;
+      --ok-bg: #163326;
+      --ok-ink: #7FCBA3;
+      --danger: #E28173;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12181C;
+    --surface: #1A2226;
+    --surface-sunken: #161D21;
+    --ink: #E7EDEF;
+    --ink-soft: #9FB0B6;
+    --ink-faint: #6E7E84;
+    --accent: #57B4BC;
+    --accent-ink: #08191C;
+    --accent-soft: #1D2E30;
+    --border: #2A363B;
+    --border-strong: #3A484D;
+    --mono-bg: #131A1D;
+    --warn-bg: #372A13;
+    --warn-border: #6B4F1E;
+    --warn-ink: #E8C078;
+    --ok-bg: #163326;
+    --ok-ink: #7FCBA3;
+    --danger: #E28173;
+  }
+  * { box-sizing: border-box; }
+  html {
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+  }
+  html, body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 64px;
+  }
+  header.top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  header.top h1 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  header.top p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    max-width: 56ch;
+  }
+  .step-index {
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: right;
+    line-height: 1.6;
+  }
+  section.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  section.card h2 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  section.card h2 .n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  section.card .hint {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+    max-width: 70ch;
+  }
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 860px) {
+    .grid-two { grid-template-columns: 1fr; }
+  }
+  textarea.paste {
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-sunken);
+    color: var(--ink);
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  textarea.paste:focus, input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .btn-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  button:hover { background: var(--surface-sunken); }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  button.primary:hover { filter: brightness(1.05); }
+  button.ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 6px 8px;
+  }
+  button.ghost:hover { background: var(--surface-sunken); color: var(--ink); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .status {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .status.ok { color: var(--ok-ink); }
+  .const-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field.span2 { grid-column: 1 / -1; }
+  .field label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: none;
+  }
+  .field input, .field select {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12.5px;
+    padding: 7px 9px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+  .warn-note {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 8px;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-ink);
+    border-radius: 5px;
+    padding: 9px 11px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .warn-note strong { font-weight: 700; }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  table.items {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 1180px;
+    font-size: 12px;
+  }
+  table.items th {
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: var(--surface-sunken);
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  table.items td {
+    padding: 4px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.items tr:last-child td { border-bottom: none; }
+  table.items input {
+    width: 100%;
+    min-width: 64px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11.5px;
+    padding: 5px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink);
+  }
+  table.items input:hover { border-color: var(--border); }
+  table.items input:focus { border-color: var(--accent); background: var(--surface); }
+  table.items td.computed {
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11.5px;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+  table.items td.del { text-align: center; }
+  .row-count {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .row-count .flag-note { color: var(--warn-ink); }
+  table.items tr.flagged td:first-child { box-shadow: inset 3px 0 0 var(--warn-border); }
+  #hsRulesTable { min-width: 0; }
+  #hsRulesTable td, #hsRulesTable th { white-space: normal; }
+  .preview {
+    width: 100%;
+    min-height: 140px;
+    max-height: 260px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-sunken);
+    color: var(--ink-soft);
+    font-size: 11px;
+    padding: 10px 12px;
+    line-height: 1.5;
+    white-space: pre;
+    overflow: auto;
+  }
+  details.ref {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 4px 0;
+  }
+  details.ref summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  details.ref summary::-webkit-details-marker { display: none; }
+  details.ref summary .arrow { color: var(--ink-faint); transition: transform 150ms; font-size: 11px; }
+  details.ref[open] summary .arrow { transform: rotate(90deg); }
+  .ref-body { padding: 4px 18px 18px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; }
+  .ref-body table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 12px; }
+  .ref-body th, .ref-body td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+  .ref-body th { color: var(--ink-soft); font-weight: 600; }
+  .ref-body code { font-family: 'IBM Plex Mono', monospace; background: var(--mono-bg); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; }
+  .toast {
+    position: fixed;
+    bottom: max(20px, env(safe-area-inset-bottom, 0px) + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease, transform 160ms ease;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div>
+      <h1>Sandvik Converter</h1>
+      <p>Paste an export invoice's text, review the parsed line items, and generate the DGFT SQC-format upload CSV.</p>
+    </div>
+    <div class="step-index">Rule set: Sandvik Coromant<br>export invoice layout</div>
+  </header>
+
+  <section class="card">
+    <h2><span class="n">1</span>Paste invoice text</h2>
+    <p class="hint">Copy the text out of the export invoice PDF (select all on the item pages, or use your PDF viewer's "copy text") and paste it below, then parse. Every parsed row lands in an editable table in step 3 — fix anything the parser gets wrong there before generating the CSV.</p>
+    <textarea id="rawText" class="paste mono" placeholder="Paste the invoice text here…"></textarea>
+    <div class="btn-row">
+      <button class="primary" id="parseBtn">Parse invoice text</button>
+      <button class="ghost" id="clearBtn">Clear</button>
+      <span class="status" id="parseStatus"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="grid-two">
+      <div>
+        <h2><span class="n">2</span>Constants</h2>
+        <p class="hint">Applied to every line. Auto-filled where the parser found a value — check them before generating.</p>
+        <div class="const-grid" id="constGrid"><!-- filled by JS --></div>
+      </div>
+      <div>
+        <h2><span class="n">3</span>HS Code → SQC rules</h2>
+        <p class="hint">SQC Qty/Unit depend on the HS code (RITC): some codes report quantity (NOS), others report net weight (KGS). Add a row whenever a new HS code shows up.</p>
+        <div class="table-wrap">
+          <table class="items" id="hsRulesTable">
+            <thead><tr><th>HS Code (RITC)</th><th>SQC Unit</th><th>Basis</th><th></th></tr></thead>
+            <tbody id="hsRulesBody"></tbody>
+          </table>
+        </div>
+        <div class="btn-row"><button id="addHsRuleBtn">+ Add HS code</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">4</span>Line items <span id="itemCount" class="status" style="font-weight:400"></span></h2>
+    <p class="hint">Each row builds Product&nbsp;Desc, RITC, Rate, Quantity and SQC&nbsp;Qty/Unit (via the HS code rules above). Edit any cell directly; add rows for items the parser missed.</p>
+    <div class="table-wrap">
+      <table class="items" id="itemsTable">
+        <thead>
+          <tr>
+            <th>Heading</th>
+            <th>Tariff No</th>
+            <th>Tariff Desc</th>
+            <th>Article Code</th>
+            <th>Dly Code</th>
+            <th>Product Name</th>
+            <th>Blank/Batch No</th>
+            <th>Brand Line</th>
+            <th>Net Wt/pc (kg)</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>SQC Qty</th>
+            <th>SQC Unit</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+    <div class="row-count"><span id="rowCount">0 rows</span><span class="flag-note" id="flagNote"></span></div>
+    <div class="btn-row">
+      <button id="addRowBtn">+ Add row</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="n">5</span>Generate CSV</h2>
+    <p class="hint">Builds all 114 SQC upload columns — header row plus one row per line item, mapped/left blank per the rule set below.</p>
+    <div class="btn-row">
+      <button class="primary" id="genBtn">Generate CSV</button>
+      <button id="downloadBtn" disabled>Download CSV</button>
+      <button id="copyBtn" disabled>Copy CSV</button>
+      <span class="status" id="genStatus"></span>
+    </div>
+    <textarea class="preview mono" id="preview" readonly placeholder="Generated CSV preview will appear here…"></textarea>
+  </section>
+
+  <details class="ref">
+    <summary>Rule reference<span class="arrow">▶</span></summary>
+    <div class="ref-body">
+      <p>How each field in the generated CSV is derived from the invoice, for this vendor's layout.</p>
+      <table>
+        <tr><th>CSV field</th><th>Rule</th></tr>
+        <tr><td><code>Inv No</code></td><td>Invoice No (constant, applies to every row)</td></tr>
+        <tr><td><code>Date</code></td><td>Invoice Date, reformatted D/M/YYYY</td></tr>
+        <tr><td><code>TOI</code></td><td>Fixed default (not copied from the invoice's own "Terms of delivery" — see warning above)</td></tr>
+        <tr><td><code>Product Desc</code></td><td>Heading + Tariff Desc + Article Code + Dly Code + Product Name + [Blank/Batch No] + Brand Line, joined with single spaces</td></tr>
+        <tr><td><code>Quantity</code></td><td>Item Qty, 3 decimals</td></tr>
+        <tr><td><code>Unit</code></td><td>Always <code>NOS</code> (translated from the invoice's <code>EA</code>)</td></tr>
+        <tr><td><code>Currency</code></td><td>Constant, from "Currency of invoice"</td></tr>
+        <tr><td><code>Rate</code></td><td>Item Unit Price, 6 decimals</td></tr>
+        <tr><td><code>RITC</code></td><td>Item's Tariff No, as printed under its group heading</td></tr>
+        <tr><td><code>PMV Currency</code></td><td>Fixed default, independent of whether PMV itself is populated</td></tr>
+        <tr><td><code>Exim Scheme</code></td><td>Fixed default scheme code</td></tr>
+        <tr><td><code>End Use</code></td><td>Constant, from the invoice's "END USE" line</td></tr>
+        <tr><td><code>IGST Pay Status</code></td><td>Constant — <code>LUT</code> when the invoice states operations under bond/LUT</td></tr>
+        <tr><td><code>Reward Item</code></td><td><code>YES</code> per line when its group carries a "claim rewards under RoDTEP" note</td></tr>
+        <tr><td><code>SQC Qty</code> / <code>SQC Unit</code></td><td>Depends on the item's HS code (RITC), via the HS Code → SQC rules table: a "qty" basis code reports Quantity itself (unit NOS); a "weight" basis code reports Net weight per piece × Qty (unit KGS). Both at 6 decimals. Unmapped HS codes fall back to the default in Constants and get flagged for review.</td></tr>
+        <tr><td><code>Origin District</code></td><td>Fixed default code</td></tr>
+        <tr><td><code>PTAFTA Code</code></td><td>Fixed default (no PTA/FTA claim)</td></tr>
+        <tr><td><code>RoDTEP Status</code></td><td><code>Y</code> per line, same trigger as Reward Item</td></tr>
+        <tr><td>All other columns</td><td>Left blank — not used by this invoice layout</td></tr>
+      </table>
+      <p style="margin-top:0;">The parser is tuned to this vendor's text layout (package heading + "Tariff No: …" on one line, then item rows, then product name / blank-batch-no / brand lines, with a repeated masthead block on page breaks). A differently formatted invoice may need adjustment — use the editable table in step 4 to fix any row it gets wrong in the meantime.</p>
+    </div>
+  </details>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const HEADERS = ["Inv No","Date","TOI","Product Desc","Quantity","Unit","Currency","Rate","RITC","PMV","PMV Currency","Exim Scheme","NFEI Category","Manufacturer","Manufacturer Addr","Manufacturer CodeType","Manufacturer Code","Manufacturer Cntry","Manufacturer State","Manuf Postal Code","SourceState","TransitCntry","End Use","IGST Pay Status","IGST Taxable Amt","IGST Rate","Reward Item","DEEC Regn No","DEEC Regn Date","DEEC Item SNo(Part E)","DEEC Export Qty","DEEC Item SNo(Part C)","DEEC Item Type","DEEC Item Desc","DEEC Qty","DEEC Unit","EPCG Regn No","EPCG Regn Date","EPCG Item SNo(Part E)","EPCG Export Qty","EPCG Item SNo(Part C)","EPCG Item Type","EPCG Item Desc","EPCG Qty","EPCG Unit","DBK Sr. No","DBK QTY","DBK Under","DFIA Regn No","DFIA Regn Date","DFIA Exp Item SNo","DFIA Export Qty","DFIA Imp Item SNo","DFIA Item Type","DFIA Item Desc","DFIA Qty","DFIA Unit","DFRC Regn No","DFRC Prod Group","DFRC SION Sr No","DFRC SION IONorm SNo","DFRC Qty","DFRC Unit","DFRC Item Type","DFRC Item Description","DFRC Tech. Details","Re-Exp BE No","Re-Exp BE Date","Re-Exp Inv SNo","Re-Exp Item SNo","Re-Exp Imp Port Code","Re-Exp Manual BE","Re-Exp BE Item Desc.","Re-Exp Qty Imported","Re-Exp Unit","Re-Exp Assessable Value","Re-Exp Tot Duty Paid","Re-Exp Duty Paid On","Re-Exp Qty Exported","Re-Exp Unit","Re-Exp Tech. Details","Re-Exp Input Credit Availed","Re-Exp Personal Use Item","Re-Exp Othr Identifying Params","Re-Exp Obligation No.","Re-Exp DBK Amt. Claimed","Re-Exp Item Un-Used","Re-Exp Commissioner Permission","Re-Exp Board No.","Re-Exp Board Date","Re-Exp MODVAT Availed","Re-Exp MODVAT Reversed","Product Material Code","IGST Amount","TP Exporter Name"," TP Exporter IE Code","TP Exporter BrS_No.","TP Exporter  Reg Type","TP Exporter  Reg No","TP Exporter Addr","SQC Qty","SQC Unit","CompCessRate","Origin District","PTAFTA Code","PerNoOfUnitsForItemRate","RoDTEP Status ","RoDTEP QTY","RoDTEP Unit","Medicinal Plant","Formulation","Surface Material in Contact","GST Allowed","LGD Code"];
+
+  const CONST_FIELDS = [
+    { key: "invNo", label: "Invoice No", default: "" },
+    { key: "date", label: "Date (D/M/YYYY)", default: "" },
+    { key: "toi", label: "TOI", default: "FOB", warn: true },
+    { key: "currency", label: "Currency", default: "INR" },
+    { key: "pmvCurrency", label: "PMV Currency", default: "INR" },
+    { key: "eximScheme", label: "Exim Scheme", default: "21" },
+    { key: "endUse", label: "End Use", default: "GNX200" },
+    { key: "igstPayStatus", label: "IGST Pay Status", default: "LUT" },
+    { key: "rewardItem", label: "Reward Item", default: "YES" },
+    { key: "rodtepStatus", label: "RoDTEP Status", default: "Y" },
+    { key: "unit", label: "Unit", default: "NOS" },
+    { key: "sqcUnit", label: "SQC Unit (fallback default)", default: "KGS" },
+    { key: "originDistrict", label: "Origin District", default: "490" },
+    { key: "ptaftaCode", label: "PTAFTA Code", default: "NCPTI" },
+    { key: "knownDlyCodes", label: "Known Dly Codes (comma-sep.)", default: "H10F,D210,P1PL,P1PM,C110,B150", wide: true }
+  ];
+
+  let items = [];
+  let rowSeq = 0;
+
+  // HS Code (RITC) -> SQC rule. "qty" basis: SQC Qty = Quantity, unit typically NOS.
+  // "weight" basis: SQC Qty = Net weight per piece x Qty, unit typically KGS.
+  // Seeded with the codes confirmed so far across the Sandvik invoices and the
+  // Seco/L-Net converter's own table; editable in the UI, add rows as new codes appear.
+  let hsRules = [
+    { hsCode: "84661010", unit: "NOS", basis: "qty" },
+    { hsCode: "82075000", unit: "KGS", basis: "weight" },
+    { hsCode: "82074090", unit: "KGS", basis: "weight" },
+    { hsCode: "82076010", unit: "KGS", basis: "weight" },
+    { hsCode: "82090010", unit: "KGS", basis: "weight" },
+    { hsCode: "69091990", unit: "KGS", basis: "weight" },
+    { hsCode: "82077010", unit: "KGS", basis: "weight" }
+  ];
+
+  function renderConstants() {
+    const grid = document.getElementById("constGrid");
+    grid.innerHTML = "";
+    CONST_FIELDS.forEach(f => {
+      const wrap = document.createElement("div");
+      wrap.className = f.wide ? "field span2" : "field";
+      wrap.innerHTML = `<label for="c_${f.key}">${f.label}</label><input id="c_${f.key}" data-key="${f.key}" value="${f.default}">`;
+      grid.appendChild(wrap);
+    });
+    const warn = document.createElement("div");
+    warn.className = "warn-note";
+    warn.innerHTML = "<span>&#9888;&#65039;</span><span><strong>TOI</strong> defaults to <code class='mono'>FOB</code>. The sample invoice's own \"Terms of delivery\" said <code class='mono'>FCA PUNE</code> — TOI didn't follow it. Confirm this against a second invoice before trusting the default.</span>";
+    grid.appendChild(warn);
+  }
+
+  function getConstants() {
+    const out = {};
+    CONST_FIELDS.forEach(f => {
+      const el = document.getElementById("c_" + f.key);
+      out[f.key] = el ? el.value : f.default;
+    });
+    return out;
+  }
+
+  function setConstant(key, value) {
+    const el = document.getElementById("c_" + key);
+    if (el && value) el.value = value;
+  }
+
+  // ---------- Parser ----------
+  const headerRe = /^(.*?)\s+Tariff No:\s*(\d+)\s+(.*)$/i;
+  // primary: article code may itself contain spaces (e.g. "CDJNL 2525M 15-4"); lazily
+  // capture everything up to the whitespace-separated delivery-type letter + UM, since
+  // the trailing "letter UM qty price total$" shape is unique and anchors the match.
+  const itemRe = /^(\d+)\s+(\d*\.\d+)\s+(\d+)\s+(.+?)\s+([PC])\s+([A-Z]{2,3})\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)$/;
+  // fallback for rows where the PDF extraction glued the delivery-type letter onto the
+  // last code token with no space at all (e.g. "...X075C110C EA ...")
+  const gluedItemRe = /^(\d+)\s+(\d*\.\d+)\s+(\d+)\s+(\S+)\s+([A-Z]{2,3})\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)$/;
+  const knownDlyCodes = ["H10F", "D210", "P1PL", "P1PM", "C110", "B150"];
+  const dateOnlyRe = /^\d{2}\/\d{2}\/\d{4}$/;
+  const pageMarkerRe = /^Page\s+\d+\(\d+\)$/i;
+
+  // a page break reprints the whole invoice masthead (address, GSTIN, bank details,
+  // column headers) before real content resumes; that block always ends with a
+  // standalone "Amount" line (the last column header), so skip through to there.
+  function skipPageBreak(lines, i) {
+    if (i < lines.length && pageMarkerRe.test(lines[i])) {
+      const afterMarker = i + 1;
+      let j = afterMarker;
+      let steps = 0;
+      while (j < lines.length && lines[j] !== "Amount" && steps < 40) { j++; steps++; }
+      if (j < lines.length && lines[j] === "Amount") {
+        return j + 1; // found the masthead's end anchor — resume right after it
+      }
+      return afterMarker; // anchor not found nearby — only skip the marker itself
+    }
+    return i;
+  }
+
+  // splits a matched code span (article code, with an optional trailing Dly Code token)
+  function splitCodeSpan(codeSpan, knownList) {
+    const tokens = codeSpan.split(/\s+/);
+    if (tokens.length > 1) {
+      const last = tokens[tokens.length - 1];
+      const isKnown = knownList.indexOf(last) !== -1;
+      const isPlausibleShape = /^[A-Z][A-Z0-9]{3}$/.test(last);
+      if (isKnown || isPlausibleShape) {
+        return { articleCode: tokens.slice(0, -1).join(" "), dlyCode: last };
+      }
+    }
+    return { articleCode: codeSpan, dlyCode: "" };
+  }
+
+  function splitGluedCode(blob, knownList) {
+    const last = blob.slice(-1);
+    if (last !== "P" && last !== "C") return { articleCode: blob, dlyCode: "", deliveryType: "" };
+    const rest = blob.slice(0, -1);
+    for (const code of knownList) {
+      if (rest.endsWith(code) && rest.length > code.length) {
+        return { articleCode: rest.slice(0, -code.length), dlyCode: code, deliveryType: last };
+      }
+    }
+    const m = rest.match(/^(.*?)([A-Z][A-Z0-9]{3})$/);
+    if (m && m[1].length > 0) {
+      return { articleCode: m[1], dlyCode: m[2], deliveryType: last };
+    }
+    return { articleCode: rest, dlyCode: "", deliveryType: last };
+  }
+
+  function parseInvoiceText(text, knownList) {
+    knownList = knownList || knownDlyCodes;
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const parsed = [];
+    let heading = "", tariffNo = "", tariffDesc = "";
+    let invNoGuess = "", dateGuess = "", endUseGuess = "", lutGuess = false;
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      const hm = line.match(headerRe);
+      let im = line.match(itemRe);
+      let glued = false;
+      if (!im) {
+        im = line.match(gluedItemRe);
+        glued = !!im;
+      }
+      if (hm) {
+        heading = hm[1].trim();
+        tariffNo = hm[2].trim();
+        tariffDesc = hm[3].trim();
+        i++; continue;
+      }
+      if (im) {
+        let articleCode, dlyCode, qty, unitPrice;
+        if (glued) {
+          const split = splitGluedCode(im[4], knownList);
+          articleCode = split.articleCode;
+          dlyCode = split.dlyCode;
+          qty = im[6];
+          unitPrice = im[7];
+        } else {
+          const split = splitCodeSpan(im[4], knownList);
+          articleCode = split.articleCode;
+          dlyCode = split.dlyCode;
+          qty = im[7];
+          unitPrice = im[8];
+        }
+        const item = {
+          id: ++rowSeq,
+          heading, tariffNo, tariffDesc,
+          articleCode, dlyCode,
+          netWt: normalizeNetWt(im[2].replace(/^\./, "0.")),
+          qty, unitPrice,
+          productName: "", blankNo: "", brandLine: "",
+          flagged: glued
+        };
+        i++;
+        // a page break drops the whole masthead before the real content resumes
+        i = skipPageBreak(lines, i);
+        // the product-name line normally comes immediately after the item row
+        if (i < lines.length && !itemRe.test(lines[i]) && !gluedItemRe.test(lines[i]) && !headerRe.test(lines[i]) && !/^brand\s*:/i.test(lines[i]) && !/^blank\s*no\b/i.test(lines[i])) {
+          item.productName = lines[i]; i++;
+        }
+        i = skipPageBreak(lines, i);
+        // an optional blank/batch-no line normally comes right after that
+        if (i < lines.length && /^blank\s*no\b/i.test(lines[i])) {
+          item.blankNo = lines[i]; i++;
+        }
+        // then scan forward for "Brand:", silently skipping any page-break
+        // masthead boilerplate that a page break inserted before it
+        while (i < lines.length && !itemRe.test(lines[i]) && !gluedItemRe.test(lines[i]) && !headerRe.test(lines[i])) {
+          i = skipPageBreak(lines, i);
+          if (i >= lines.length) break;
+          if (/^brand\s*:/i.test(lines[i])) { item.brandLine = lines[i].replace(/^brand/i, "Brand"); i++; break; }
+          i++;
+        }
+        parsed.push(item);
+        continue;
+      }
+      const endUseM = line.match(/END USE\s*:\s*(\S+)/i);
+      if (endUseM) endUseGuess = endUseM[1];
+      if (/OPERATIONS UNDER BOND/i.test(line)) lutGuess = true;
+      if (!invNoGuess) {
+        const m = line.match(/\b([A-Z]\d{6})\b/);
+        if (m) invNoGuess = m[1];
+      }
+      if (!dateGuess) {
+        const m2 = line.match(/(\d{4})\/(\d{2})\/(\d{2})/);
+        if (m2) dateGuess = parseInt(m2[3], 10) + "/" + parseInt(m2[2], 10) + "/" + m2[1];
+      }
+      i++;
+    }
+    return { items: parsed, invNoGuess, dateGuess, endUseGuess, lutGuess };
+  }
+
+  // ---------- Table rendering ----------
+  const COLS = [
+    { key: "heading", ph: "Package heading" },
+    { key: "tariffNo", ph: "82075000" },
+    { key: "tariffDesc", ph: "Tariff description" },
+    { key: "articleCode", ph: "Article code" },
+    { key: "dlyCode", ph: "Dly code" },
+    { key: "productName", ph: "Product name" },
+    { key: "blankNo", ph: "" },
+    { key: "brandLine", ph: "Brand: …" },
+    { key: "netWt", ph: "0.000" },
+    { key: "qty", ph: "0.000" },
+    { key: "unitPrice", ph: "0.00" }
+  ];
+
+  function normalizeNetWt(netWt) {
+    const n = parseFloat(netWt);
+    if (!isNaN(n) && n === 0) return "0.0001";
+    return netWt;
+  }
+
+  function findHsRule(hsCode) {
+    return hsRules.find(r => r.hsCode === (hsCode || "").trim()) || null;
+  }
+
+  function resolveSqc(item, constants) {
+    const rule = findHsRule(item.tariffNo);
+    const nw = parseFloat(normalizeNetWt(item.netWt)) || 0;
+    const q = parseFloat(item.qty) || 0;
+    if (rule) {
+      const value = rule.basis === "qty" ? q : nw * q;
+      return { value: value.toFixed(6), unit: rule.unit, matched: true };
+    }
+    // no rule for this HS code — fall back to the weight-based default, flagged for review
+    return { value: (nw * q).toFixed(6), unit: constants ? constants.sqcUnit : "KGS", matched: false };
+  }
+
+  function renderTable() {
+    const body = document.getElementById("itemsBody");
+    body.innerHTML = "";
+    items.forEach((item, idx) => {
+      const tr = document.createElement("tr");
+      const sqc = resolveSqc(item, getConstants());
+      const needsAttention = item.flagged || !sqc.matched;
+      if (needsAttention) {
+        tr.className = "flagged";
+        tr.title = item.flagged
+          ? "Article Code / Dly Code were auto-split from a glued token — verify these two cells."
+          : "No SQC rule matched this HS code (RITC) — using the fallback default. Add a rule below if this HS code recurs.";
+      }
+      let sqcCell, sqcUnitCell;
+      COLS.forEach(col => {
+        const td = document.createElement("td");
+        const input = document.createElement("input");
+        input.value = item[col.key] || "";
+        input.placeholder = col.ph;
+        input.addEventListener("input", (e) => {
+          item[col.key] = e.target.value;
+          const updated = resolveSqc(item, getConstants());
+          sqcCell.textContent = updated.value;
+          sqcUnitCell.textContent = updated.unit;
+        });
+        if (col.key === "netWt") {
+          input.addEventListener("blur", (e) => {
+            const normalized = normalizeNetWt(e.target.value);
+            if (normalized !== e.target.value) {
+              e.target.value = normalized;
+              item.netWt = normalized;
+              const updated = resolveSqc(item, getConstants());
+              sqcCell.textContent = updated.value;
+              sqcUnitCell.textContent = updated.unit;
+            }
+          });
+        }
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+      const sqcTd = document.createElement("td");
+      sqcTd.className = "computed";
+      sqcTd.textContent = sqc.value;
+      sqcCell = sqcTd;
+      tr.appendChild(sqcTd);
+
+      const sqcUnitTd = document.createElement("td");
+      sqcUnitTd.className = "computed";
+      sqcUnitTd.textContent = sqc.unit;
+      sqcUnitCell = sqcUnitTd;
+      tr.appendChild(sqcUnitTd);
+
+      const delTd = document.createElement("td");
+      delTd.className = "del";
+      const delBtn = document.createElement("button");
+      delBtn.className = "ghost";
+      delBtn.textContent = "✕";
+      delBtn.title = "Remove row";
+      delBtn.addEventListener("click", () => {
+        items.splice(idx, 1);
+        renderTable();
+      });
+      delTd.appendChild(delBtn);
+      tr.appendChild(delTd);
+
+      body.appendChild(tr);
+    });
+    document.getElementById("rowCount").textContent = items.length + (items.length === 1 ? " row" : " rows");
+    const flaggedCount = items.filter(it => it.flagged).length;
+    const flagEl = document.getElementById("flagNote");
+    if (flaggedCount > 0) {
+      flagEl.textContent = "⚠ " + flaggedCount + " row" + (flaggedCount === 1 ? "" : "s") + " had a glued Article Code / Dly Code auto-split — check the highlighted row" + (flaggedCount === 1 ? "" : "s") + ".";
+      flagEl.className = "flag-note";
+    } else {
+      flagEl.textContent = "";
+    }
+    document.getElementById("itemCount").textContent = items.length ? ("(" + items.length + ")") : "";
+  }
+
+  function addBlankRow() {
+    items.push({ id: ++rowSeq, heading: "", tariffNo: "", tariffDesc: "", articleCode: "", dlyCode: "", productName: "", blankNo: "", brandLine: "", netWt: "", qty: "", unitPrice: "" });
+    renderTable();
+  }
+
+  // ---------- HS Code -> SQC rules table ----------
+  function renderHsRulesTable() {
+    const body = document.getElementById("hsRulesBody");
+    body.innerHTML = "";
+    hsRules.forEach((rule, idx) => {
+      const tr = document.createElement("tr");
+
+      const hsTd = document.createElement("td");
+      const hsInput = document.createElement("input");
+      hsInput.value = rule.hsCode;
+      hsInput.placeholder = "84661010";
+      hsInput.addEventListener("input", e => { rule.hsCode = e.target.value.trim(); renderTable(); });
+      hsTd.appendChild(hsInput);
+      tr.appendChild(hsTd);
+
+      const unitTd = document.createElement("td");
+      const unitInput = document.createElement("input");
+      unitInput.value = rule.unit;
+      unitInput.placeholder = "NOS / KGS";
+      unitInput.addEventListener("input", e => { rule.unit = e.target.value.trim(); renderTable(); });
+      unitTd.appendChild(unitInput);
+      tr.appendChild(unitTd);
+
+      const basisTd = document.createElement("td");
+      const basisSelect = document.createElement("select");
+      basisSelect.style.cssText = "font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:5px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface-sunken);color:var(--ink);width:100%;";
+      ["qty", "weight"].forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b; opt.textContent = b === "qty" ? "Quantity" : "Net weight × Qty";
+        if (rule.basis === b) opt.selected = true;
+        basisSelect.appendChild(opt);
+      });
+      basisSelect.addEventListener("change", e => { rule.basis = e.target.value; renderTable(); });
+      basisTd.appendChild(basisSelect);
+      tr.appendChild(basisTd);
+
+      const delTd = document.createElement("td");
+      delTd.className = "del";
+      const delBtn = document.createElement("button");
+      delBtn.className = "ghost";
+      delBtn.textContent = "✕";
+      delBtn.title = "Remove this HS code rule";
+      delBtn.addEventListener("click", () => { hsRules.splice(idx, 1); renderHsRulesTable(); renderTable(); });
+      delTd.appendChild(delBtn);
+      tr.appendChild(delTd);
+
+      body.appendChild(tr);
+    });
+  }
+
+  function addHsRule() {
+    hsRules.push({ hsCode: "", unit: "KGS", basis: "weight" });
+    renderHsRulesTable();
+  }
+
+  // ---------- CSV generation ----------
+  function csvEscape(v) {
+    const s = (v === undefined || v === null) ? "" : String(v);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function buildProductDesc(item) {
+    return [item.heading, item.tariffDesc, item.articleCode, item.dlyCode, item.productName, item.blankNo, item.brandLine]
+      .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  function buildRow(item, c) {
+    const row = new Array(HEADERS.length).fill("");
+    row[0] = c.invNo;
+    row[1] = c.date;
+    row[2] = c.toi;
+    row[3] = buildProductDesc(item);
+    row[4] = (parseFloat(item.qty) || 0).toFixed(3);
+    row[5] = c.unit;
+    row[6] = c.currency;
+    row[7] = (parseFloat(item.unitPrice) || 0).toFixed(6);
+    row[8] = item.tariffNo;
+    row[10] = c.pmvCurrency;
+    row[11] = c.eximScheme;
+    row[22] = c.endUse;
+    row[23] = c.igstPayStatus;
+    row[26] = c.rewardItem;
+    const sqc = resolveSqc(item, c);
+    row[100] = sqc.value;
+    row[101] = sqc.unit;
+    row[103] = c.originDistrict;
+    row[104] = c.ptaftaCode;
+    row[106] = c.rodtepStatus;
+    return row;
+  }
+
+  function generateCsv() {
+    if (!items.length) return "";
+    const c = getConstants();
+    const lines = [HEADERS.map(csvEscape).join(",")];
+    items.forEach(item => {
+      lines.push(buildRow(item, c).map(csvEscape).join(","));
+    });
+    return lines.join("\r\n") + "\r\n";
+  }
+
+  // ---------- Toast ----------
+  function toast(msg, duration) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._h);
+    toast._h = setTimeout(() => t.classList.remove("show"), duration || 2400);
+  }
+
+  // ---------- Wiring ----------
+  document.getElementById("parseBtn").addEventListener("click", () => {
+    const text = document.getElementById("rawText").value;
+    if (!text.trim()) { document.getElementById("parseStatus").textContent = "Paste some invoice text first."; return; }
+    const knownList = (getConstants().knownDlyCodes || "").split(",").map(s => s.trim()).filter(Boolean);
+    const result = parseInvoiceText(text, knownList);
+    if (!result.items.length) {
+      document.getElementById("parseStatus").textContent = "No line items recognized — check the pasted text, or add rows manually below.";
+      return;
+    }
+    items = result.items;
+    if (result.invNoGuess) setConstant("invNo", result.invNoGuess);
+    if (result.dateGuess) setConstant("date", result.dateGuess);
+    if (result.endUseGuess) setConstant("endUse", result.endUseGuess);
+    if (result.lutGuess) setConstant("igstPayStatus", "LUT");
+    renderTable();
+    const statusEl = document.getElementById("parseStatus");
+    statusEl.textContent = "Parsed " + result.items.length + " line item" + (result.items.length === 1 ? "" : "s") + " — review below.";
+    statusEl.classList.add("ok");
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    document.getElementById("rawText").value = "";
+    document.getElementById("parseStatus").textContent = "";
+  });
+
+  document.getElementById("addRowBtn").addEventListener("click", addBlankRow);
+  document.getElementById("addHsRuleBtn").addEventListener("click", addHsRule);
+
+  document.getElementById("genBtn").addEventListener("click", () => {
+    if (!items.length) {
+      document.getElementById("genStatus").textContent = "No line items yet — parse an invoice or add rows first.";
+      return;
+    }
+    const csv = generateCsv();
+    document.getElementById("preview").value = csv;
+    document.getElementById("downloadBtn").disabled = false;
+    document.getElementById("copyBtn").disabled = false;
+    document.getElementById("genStatus").textContent = "Generated " + items.length + " row" + (items.length === 1 ? "" : "s") + ".";
+  });
+
+  function browserDownload(csv, filename) {
+    try {
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast("Download started.");
+    } catch (err2) {
+      toast("Couldn't start the download automatically — use Copy CSV instead.", 5000);
+      console.error("browser download failed:", err2);
+    }
+  }
+
+  document.getElementById("downloadBtn").addEventListener("click", async () => {
+    const csv = document.getElementById("preview").value;
+    if (!csv) return;
+    const c = getConstants();
+    const filename = (c.invNo || "sqc-upload") + ".csv";
+
+    // Only the claude.ai artifact viewer exposes window.claude / the downloads
+    // capability. When this file is opened directly (e.g. double-clicked after
+    // downloading it), that's absent — fall back to a normal browser download.
+    if (typeof claude === "undefined" || !claude.use) {
+      browserDownload(csv, filename);
+      return;
+    }
+    try {
+      const downloads = await claude.use("downloads");
+      if (!downloads) { browserDownload(csv, filename); return; }
+      await downloads.save({ filename, data: csv });
+      toast("Download offered — check the confirmation.");
+    } catch (err) {
+      const code = err && err.code ? err.code : "unknown";
+      console.error("downloads.save failed, falling back to browser download:", code, err && err.message, err);
+      browserDownload(csv, filename);
+    }
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", async () => {
+    const csv = document.getElementById("preview").value;
+    if (!csv) return;
+    try {
+      await navigator.clipboard.writeText(csv);
+      toast("CSV copied — paste into a .csv file.");
+    } catch (err) {
+      const preview = document.getElementById("preview");
+      preview.select();
+      toast("Couldn't copy automatically — text is selected, use Ctrl/Cmd+C.", 5000);
+    }
+  });
+
+  renderConstants();
+  renderHsRulesTable();
+  renderTable();
+})();
+</script>
+</body>
+</html>

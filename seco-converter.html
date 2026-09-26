@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Data Entry Automation</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --text:#1a1d23; --text-2:#5b6270; --text-3:#8a90a0;
+  --border:#e2e4ea; --accent:#2e6bd6; --accent-text:#ffffff; --accent-soft:#eaf1fd;
+  --green:#1f8a4c; --green-soft:#e7f6ed; --red:#c0392b; --red-soft:#fdecea;
+  --amber:#b8790a; --amber-soft:#fdf2df; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161a; --card:#1c1f26; --text:#eceef2; --text-2:#a7adba; --text-3:#767c8a;
+    --border:#2c303a; --accent:#5b93e8; --accent-text:#0c1420; --accent-soft:#1c2b42;
+    --green:#4cbf7f; --green-soft:#123322; --red:#e8695d; --red-soft:#3a1c1a;
+    --amber:#e0ab4c; --amber-soft:#3a2c12;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161a; --card:#1c1f26; --text:#eceef2; --text-2:#a7adba; --text-3:#767c8a;
+  --border:#2c303a; --accent:#5b93e8; --accent-text:#0c1420; --accent-soft:#1c2b42;
+  --green:#4cbf7f; --green-soft:#123322; --red:#e8695d; --red-soft:#3a1c1a;
+  --amber:#e0ab4c; --amber-soft:#3a2c12;
+}
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:24px;}
+.wrap{max-width:920px;margin:0 auto;}
+h1{font-size:22px;font-weight:600;margin:0 0 4px;}
+.sub{color:var(--text-2);font-size:13.5px;margin:0 0 24px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:16px;}
+.card h2{font-size:15px;font-weight:600;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;}
+.hint{color:var(--text-2);font-size:12.5px;margin:2px 0 12px;}
+.filebtn{display:inline-flex;align-items:center;gap:8px;border:1px dashed var(--border);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:13.5px;color:var(--text-2);background:transparent;}
+.filebtn:hover{border-color:var(--accent);color:var(--accent);}
+.filename{font-size:13px;color:var(--text);margin-top:8px;word-break:break-all;}
+.filename.ok{color:var(--green);}
+input[type=file]{display:none;}
+table.map{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.map th{text-align:left;color:var(--text-3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;padding:6px 6px;border-bottom:1px solid var(--border);}
+table.map td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:top;}
+table.map input, table.map select{width:100%;background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 6px;font-size:12.5px;color:var(--text);font-family:inherit;}
+table.map input:hover, table.map select:hover{border-color:var(--border);}
+table.map input:focus, table.map select:focus{outline:none;border-color:var(--accent);background:var(--card);}
+.rowbtn{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:15px;padding:2px 6px;}
+.rowbtn:hover{color:var(--red);}
+.addrow{margin-top:8px;font-size:12.5px;color:var(--accent);background:none;border:none;cursor:pointer;padding:4px 0;}
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cfg-grid label{font-size:12px;color:var(--text-2);display:block;margin-bottom:4px;}
+.cfg-grid input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:13px;}
+details summary{cursor:pointer;font-size:13px;color:var(--text-2);margin-bottom:10px;}
+.genbtn{width:100%;padding:13px;border:none;border-radius:9px;background:var(--accent);color:var(--accent-text);font-size:14.5px;font-weight:600;cursor:pointer;}
+.genbtn:hover{filter:brightness(1.06);}
+.genbtn:disabled{opacity:.5;cursor:not-allowed;}
+.status{border-radius:9px;padding:12px 14px;font-size:13px;margin-top:14px;display:none;white-space:pre-wrap;}
+.status.err{display:block;background:var(--red-soft);color:var(--red);}
+.status.ok{display:block;background:var(--green-soft);color:var(--green);}
+.status.info{display:block;background:var(--amber-soft);color:var(--amber);}
+.loglist{font-size:12.5px;color:var(--text-2);}
+.logrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.logrow:last-child{border-bottom:none;}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge.ok{background:var(--green-soft);color:var(--green);}
+.badge.err{background:var(--red-soft);color:var(--red);}
+.footer-note{color:var(--text-3);font-size:12px;margin-top:20px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Data Entry Automation</h1>
+  <p class="sub">Reusable, templatized conversion tool. Rules live in the Mapping table below &mdash; not hidden in code.</p>
+
+  <div class="card" style="display:flex;align-items:center;gap:14px;padding:14px 22px;">
+    <label style="font-size:13px;font-weight:600;color:var(--text-2);white-space:nowrap;">Customer</label>
+    <select id="customerSelect" style="padding:8px 12px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:13.5px;font-weight:600;min-width:160px;">
+      <option value="Seco" selected>Seco</option>
+    </select>
+    <span class="hint" style="margin:0;">Each customer can have its own Mapping / HS Code rules. Currently set up for Seco.</span>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">1</span> Source Excel file</h2>
+    <p class="hint">The vendor / source workbook. Only the sheets listed in Settings below are read.</p>
+    <label class="filebtn"><input type="file" id="srcFile" accept=".xlsx,.xls,.xlsm">Choose file&hellip;</label>
+    <div class="filename" id="srcFileName">No file selected</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">2</span> ERP template file <span style="font-weight:400;color:var(--text-3);font-size:12px;">(optional — default pre-loaded)</span></h2>
+    <p class="hint">A CSV whose header row defines the exact output column names and order. The Seco Tool template is already built in below — only upload a file here if this customer's format changes.</p>
+    <label class="filebtn"><input type="file" id="erpFile" accept=".csv">Choose a different file&hellip;</label>
+    <div class="filename" id="erpFileName">No file selected</div>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Settings (which sheets to read, header row, etc.)</summary>
+      <div class="cfg-grid">
+        <div><label>Source sheets to read (comma-separated, in order)</label><input id="cfgSheets" value="Sheet1,Sheet2"></div>
+        <div><label>Header row number</label><input id="cfgHeaderRow" value="1"></div>
+        <div><label>Data start row number</label><input id="cfgDataStart" value="2"></div>
+        <div><label>Output filename suffix</label><input id="cfgSuffix" value="_ERP_Upload.csv"></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">3</span> Mapping rules</h2>
+    <p class="hint">One row per ERP output column. Any ERP column with no row here is left blank. To reuse this tool for a different file later, just edit this table.</p>
+    <table class="map" id="mapTable">
+      <thead><tr>
+        <th style="width:14%">ERP field</th><th style="width:10%">Source sheet</th><th style="width:14%">Source field</th>
+        <th style="width:10%">Rule type</th><th style="width:26%">Rule / formula</th><th style="width:10%">Default</th><th style="width:8%">Mandatory <input type="checkbox" id="mandSelectAll" title="Select/clear all" style="vertical-align:middle;margin-left:4px;"></th><th></th>
+      </tr></thead>
+      <tbody id="mapBody"></tbody>
+    </table>
+    <button class="addrow" id="addRowBtn">+ Add row</button>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">4</span> SQC Qty &amp; Unit rules (by HS Code)</h2>
+    <p class="hint">Some HS codes report quantity by weight (KGS), others by count (NOS). Add one row per HS code you deal with — every row's RITC/HS Code must match one of these, or the tool stops and tells you which HS code is unrecognized.</p>
+    <table class="map" id="hsTable">
+      <thead><tr>
+        <th style="width:20%">HS Code / RITC</th><th style="width:15%">SQC Unit</th><th style="width:20%">SQC Qty from Sheet</th><th style="width:35%">SQC Qty from Field</th><th></th>
+      </tr></thead>
+      <tbody id="hsBody"></tbody>
+    </table>
+    <button class="addrow" id="addHsRowBtn">+ Add row</button>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">5</span> Generate</h2>
+    <p class="hint">Validates required fields and row counts before creating the file. Nothing is generated if something's wrong.</p>
+    <button class="genbtn" id="genBtn">Generate output file</button>
+    <div class="status" id="statusBox"></div>
+  </div>
+
+  <div class="card">
+    <h2>Run history</h2>
+    <div class="loglist" id="logList"><div style="color:var(--text-3)">No runs yet this session.</div></div>
+  </div>
+
+  <p class="footer-note">Rule types &mdash; <b>Direct</b>: copy the source field as-is. <b>Constant</b>: always use Default. <b>Date</b>: reformat the source value using the pattern in Rule/formula (e.g. DD.MM.YYYY). <b>Template</b>: build text from a pattern with source columns in curly braces, e.g. {Item Name} &mdash; all braces must reference the sheet named in Source sheet. SQC Qty and SQC Unit are not set in the Mapping table above &mdash; they're driven entirely by the HS Code rules table, since they vary by HS code rather than being fixed.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const DEFAULT_MAPPING = [
+ {erp:"Inv No", sheet:"Sheet1", field:"Invoice No", type:"Direct", rule:"", def:"", mand:true},
+ {erp:"Date", sheet:"Sheet1", field:"Entry Date", type:"Date", rule:"DD.MM.YYYY", def:"", mand:true},
+ {erp:"Quantity", sheet:"Sheet1", field:"Transaction Qty", type:"Direct", rule:"", def:"", mand:true},
+ {erp:"Rate", sheet:"Sheet1", field:"Net Price", type:"Direct", rule:"", def:"", mand:true},
+ {erp:"RITC", sheet:"Sheet1", field:"Freight Code Export", type:"Direct", rule:"", def:"", mand:true},
+ {erp:"Product Desc", sheet:"Sheet1", field:"", type:"Template", rule:"{Freight Code Export Desc}, {Item Name},{Item No}, COO-{Origin}, CO NO:{Order No}", def:"", mand:true},
+ {erp:"TOI", sheet:"", field:"", type:"Constant", rule:"", def:"FOB", mand:false},
+ {erp:"Unit", sheet:"", field:"", type:"Constant", rule:"", def:"NOS", mand:false},
+ {erp:"Currency", sheet:"", field:"", type:"Constant", rule:"", def:"INR", mand:false},
+ {erp:"PMV Currency", sheet:"", field:"", type:"Constant", rule:"", def:"INR", mand:false},
+ {erp:"Exim Scheme", sheet:"", field:"", type:"Constant", rule:"", def:"21", mand:false},
+ {erp:"End Use", sheet:"", field:"", type:"Constant", rule:"", def:"GNX200", mand:false},
+ {erp:"IGST Pay Status", sheet:"", field:"", type:"Constant", rule:"", def:"LUT", mand:false},
+ {erp:"Reward Item", sheet:"", field:"", type:"Constant", rule:"", def:"YES", mand:false},
+ {erp:"SQC Unit", sheet:"", field:"", type:"Constant", rule:"", def:"NOS", mand:false},
+ {erp:"Origin District", sheet:"", field:"", type:"Constant", rule:"", def:"490", mand:false},
+ {erp:"PTAFTA Code", sheet:"", field:"", type:"Constant", rule:"", def:"NCPTI", mand:false},
+ {erp:"RoDTEP Status", sheet:"", field:"", type:"Constant", rule:"", def:"Y", mand:false},
+];
+
+const DEFAULT_ERP_HEADER_LINE = "Inv No,Date,TOI,Product Desc,Quantity,Unit,Currency,Rate,RITC,PMV,PMV Currency,Exim Scheme,NFEI Category,Manufacturer,Manufacturer Addr,Manufacturer CodeType,Manufacturer Code,Manufacturer Cntry,Manufacturer State,Manuf Postal Code,SourceState,TransitCntry,End Use,IGST Pay Status,IGST Taxable Amt,IGST Rate,Reward Item,DEEC Regn No,DEEC Regn Date,DEEC Item SNo(Part E),DEEC Export Qty,DEEC Item SNo(Part C),DEEC Item Type,DEEC Item Desc,DEEC Qty,DEEC Unit,EPCG Regn No,EPCG Regn Date,EPCG Item SNo(Part E),EPCG Export Qty,EPCG Item SNo(Part C),EPCG Item Type,EPCG Item Desc,EPCG Qty,EPCG Unit,DBK Sr. No,DBK QTY,DBK Under,DFIA Regn No,DFIA Regn Date,DFIA Exp Item SNo,DFIA Export Qty,DFIA Imp Item SNo,DFIA Item Type,DFIA Item Desc,DFIA Qty,DFIA Unit,DFRC Regn No,DFRC Prod Group,DFRC SION Sr No,DFRC SION IONorm SNo,DFRC Qty,DFRC Unit,DFRC Item Type,DFRC Item Description,DFRC Tech. Details,Re-Exp BE No,Re-Exp BE Date,Re-Exp Inv SNo,Re-Exp Item SNo,Re-Exp Imp Port Code,Re-Exp Manual BE,Re-Exp BE Item Desc.,Re-Exp Qty Imported,Re-Exp Unit,Re-Exp Assessable Value,Re-Exp Tot Duty Paid,Re-Exp Duty Paid On,Re-Exp Qty Exported,Re-Exp Unit,Re-Exp Tech. Details,Re-Exp Input Credit Availed,Re-Exp Personal Use Item,Re-Exp Othr Identifying Params,Re-Exp Obligation No.,Re-Exp DBK Amt. Claimed,Re-Exp Item Un-Used,Re-Exp Commissioner Permission,Re-Exp Board No.,Re-Exp Board Date,Re-Exp MODVAT Availed,Re-Exp MODVAT Reversed,Product Material Code,IGST Amount,TP Exporter Name, TP Exporter IE Code,TP Exporter BrS_No.,TP Exporter  Reg Type,TP Exporter  Reg No,TP Exporter Addr,SQC Qty,SQC Unit,CompCessRate,Origin District,PTAFTA Code,PerNoOfUnitsForItemRate,RoDTEP Status ,RoDTEP QTY,RoDTEP Unit,Medicinal Plant,Formulation,Surface Material in Contact,GST Allowed,LGD Code";
+
+let sourceWorkbook = null, sourceFileName = "";
+let erpHeaders = null, erpFileName = "";
+let usingDefaultErpTemplate = true;
+let runLog = [];
+
+const DEFAULT_HS_RULES = [
+ {hs:"84661010", unit:"NOS", sheet:"Sheet2", field:"Transaction Qty"},
+ {hs:"82090010", unit:"KGS", sheet:"Sheet1", field:"Total Weight"},
+ {hs:"69091990", unit:"KGS", sheet:"Sheet1", field:"Total Weight"},
+ {hs:"82077010", unit:"KGS", sheet:"Sheet1", field:"Total Weight"},
+];
+
+const hsBody = document.getElementById('hsBody');
+function addHsRow(row){
+  row = row || {hs:"",unit:"",sheet:"",field:""};
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="h-hs" value="${escAttr(row.hs)}"></td>
+    <td><input class="h-unit" value="${escAttr(row.unit)}"></td>
+    <td><input class="h-sheet" value="${escAttr(row.sheet)}"></td>
+    <td><input class="h-field" value="${escAttr(row.field)}"></td>
+    <td><button class="rowbtn" title="Remove row">&times;</button></td>
+  `;
+  tr.querySelector('.rowbtn').onclick = () => tr.remove();
+  hsBody.appendChild(tr);
+}
+DEFAULT_HS_RULES.forEach(addHsRow);
+document.getElementById('addHsRowBtn').onclick = () => addHsRow();
+function readHsRules(){
+  return Array.from(hsBody.querySelectorAll('tr')).map(tr => ({
+    hs: tr.querySelector('.h-hs').value.trim(),
+    unit: tr.querySelector('.h-unit').value.trim(),
+    sheet: tr.querySelector('.h-sheet').value.trim(),
+    field: tr.querySelector('.h-field').value.trim(),
+  })).filter(r => r.hs !== "");
+}
+
+const mapBody = document.getElementById('mapBody');
+
+function addMapRow(row){
+  row = row || {erp:"",sheet:"",field:"",type:"Direct",rule:"",def:"",mand:false};
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="c-erp" value="${escAttr(row.erp)}"></td>
+    <td><input class="c-sheet" value="${escAttr(row.sheet)}"></td>
+    <td><input class="c-field" value="${escAttr(row.field)}"></td>
+    <td><select class="c-type">
+      <option ${row.type==='Direct'?'selected':''}>Direct</option>
+      <option ${row.type==='Constant'?'selected':''}>Constant</option>
+      <option ${row.type==='Date'?'selected':''}>Date</option>
+      <option ${row.type==='Template'?'selected':''}>Template</option>
+    </select></td>
+    <td><input class="c-rule" value="${escAttr(row.rule)}"></td>
+    <td><input class="c-def" value="${escAttr(row.def)}"></td>
+    <td style="text-align:center"><input type="checkbox" class="c-mand" ${row.mand?'checked':''}></td>
+    <td><button class="rowbtn" title="Remove row">&times;</button></td>
+  `;
+  tr.querySelector('.rowbtn').onclick = () => tr.remove();
+  mapBody.appendChild(tr);
+}
+function escAttr(s){ return String(s||"").replace(/"/g,'&quot;'); }
+DEFAULT_MAPPING.forEach(addMapRow);
+document.getElementById('addRowBtn').onclick = () => addMapRow();
+
+document.getElementById('mandSelectAll').addEventListener('change', (e) => {
+  const checked = e.target.checked;
+  mapBody.querySelectorAll('.c-mand').forEach(cb => cb.checked = checked);
+});
+
+function readMappingTable(){
+  return Array.from(mapBody.querySelectorAll('tr')).map(tr => ({
+    erpField: tr.querySelector('.c-erp').value.trim(),
+    sourceSheet: tr.querySelector('.c-sheet').value.trim(),
+    sourceField: tr.querySelector('.c-field').value.trim(),
+    ruleType: tr.querySelector('.c-type').value.trim().toUpperCase(),
+    rule: tr.querySelector('.c-rule').value,
+    defaultValue: tr.querySelector('.c-def').value,
+    mandatory: tr.querySelector('.c-mand').checked,
+  })).filter(m => m.erpField !== "");
+}
+
+document.getElementById('srcFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  sourceFileName = f.name;
+  const buf = await f.arrayBuffer();
+  sourceWorkbook = XLSX.read(buf, {type:'array', cellDates:false});
+  const el = document.getElementById('srcFileName');
+  el.textContent = f.name + "  (sheets: " + sourceWorkbook.SheetNames.join(", ") + ")";
+  el.classList.add('ok');
+});
+
+document.getElementById('erpFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if(!f) return;
+  erpFileName = f.name;
+  usingDefaultErpTemplate = false;
+  const text = await f.text();
+  const firstLine = text.split(/\r?\n/)[0];
+  erpHeaders = splitCsvLine(firstLine);
+  const el = document.getElementById('erpFileName');
+  el.textContent = f.name + "  (" + erpHeaders.length + " columns)";
+  el.classList.add('ok');
+});
+
+// Pre-load the default Seco Tool ERP template so this step can be skipped
+(function initDefaultErpTemplate(){
+  erpHeaders = splitCsvLine(DEFAULT_ERP_HEADER_LINE);
+  erpFileName = "Seco Tool India (built-in default)";
+  const el = document.getElementById('erpFileName');
+  el.textContent = "Using built-in default: Seco Tool India template (" + erpHeaders.length + " columns). Upload a file above only if this customer's format changes.";
+  el.classList.add('ok');
+})();
+
+function splitCsvLine(line){
+  return line.split(',').map(s => {
+    s = s.trim();
+    if(s.startsWith('"') && s.endsWith('"') && s.length>=2) s = s.slice(1,-1).replace(/""/g,'"');
+    return s;
+  });
+}
+
+function readSheetRows(ws, headerRow, dataStartRow){
+  const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+  const headers = (aoa[headerRow-1]||[]).map(h => String(h).trim());
+  const rows = [];
+  for(let r = dataStartRow-1; r < aoa.length; r++){
+    const line = aoa[r];
+    if(!line || line.every(v => v==='' || v===undefined || v===null)) continue;
+    const obj = {};
+    headers.forEach((h,i) => obj[h]=line[i]);
+    rows.push(obj);
+  }
+  return {headers, rows};
+}
+function safeToString(v){
+  if(v===undefined||v===null||v==='') return '';
+  return String(v);
+}
+function findHeaderIdx(hdrs, name){
+  const t = name.trim().toLowerCase();
+  return hdrs.findIndex(h => h.trim().toLowerCase()===t);
+}
+function extractPlaceholders(tpl){
+  const out=[]; const re=/\{([^}]+)\}/g; let m;
+  while((m=re.exec(tpl))!==null) out.push(m[1]);
+  return out;
+}
+function formatDateValue(raw, pattern){
+  const s = String(raw).trim();
+  let d;
+  if(/^\d{8}$/.test(s)){
+    d = new Date(Date.UTC(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8)));
+  } else if(!isNaN(Date.parse(s))){
+    d = new Date(s);
+  } else {
+    return s;
+  }
+  const dd=String(d.getUTCDate()).padStart(2,'0'), mm=String(d.getUTCMonth()+1).padStart(2,'0'), yyyy=d.getUTCFullYear();
+  return pattern.replace('DD',dd).replace('MM',mm).replace('YYYY',String(yyyy));
+}
+function applyTemplate(tpl, sheetRows, srcSheet, rowIndex){
+  const placeholders = extractPlaceholders(tpl);
+  let out = tpl;
+  placeholders.forEach(p => {
+    const val = safeToString(sheetRows[srcSheet].rows[rowIndex][p]);
+    out = out.split('{'+p+'}').join(val);
+  });
+  return out;
+}
+function csvEscape(v){
+  v = String(v);
+  if(v.includes(',')||v.includes('"')||v.includes('\n')||v.includes('\r')) return '"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+
+function setStatus(cls, msg){
+  const box = document.getElementById('statusBox');
+  box.className = 'status ' + cls;
+  box.textContent = msg;
+}
+function clearStatus(){
+  const box = document.getElementById('statusBox');
+  box.className = 'status'; box.textContent='';
+}
+function addLog(entry){
+  runLog.unshift(entry);
+  const el = document.getElementById('logList');
+  el.innerHTML = runLog.slice(0,15).map(r =>
+    `<div class="logrow"><span>${r.time} &middot; ${r.records} record${r.records===1?'':'s'}</span><span class="badge ${r.ok?'ok':'err'}">${r.ok?'Success':'Error'}</span></div>`
+  ).join('');
+}
+
+document.getElementById('genBtn').addEventListener('click', async () => {
+  clearStatus();
+  if(!sourceWorkbook){ setStatus('err','Please select the source Excel file first.'); return; }
+  if(!erpHeaders){ setStatus('err','Please select the ERP template CSV file first.'); return; }
+
+  const mapping = readMappingTable();
+  if(mapping.length===0){ setStatus('err','The mapping table has no rules. Add at least one row.'); return; }
+
+  const hsRules = readHsRules();
+
+  const cfgSheets = document.getElementById('cfgSheets').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const headerRow = parseInt(document.getElementById('cfgHeaderRow').value,10) || 1;
+  const dataStart = parseInt(document.getElementById('cfgDataStart').value,10) || 2;
+  const suffix = document.getElementById('cfgSuffix').value || '_ERP_Upload.csv';
+
+  // validate mapping ERP fields exist in ERP headers
+  for(const m of mapping){
+    if(findHeaderIdx(erpHeaders, m.erpField) === -1){
+      setStatus('err', `Mapping row for ERP field "${m.erpField}" was not found in the ERP template's columns. Check for a typo or confirm you selected the right ERP template.`);
+      return;
+    }
+  }
+
+  // load configured sheets
+  const sheetRows = {};
+  for(const sn of cfgSheets){
+    if(!sourceWorkbook.SheetNames.includes(sn)){
+      setStatus('err', `The source file does not contain a sheet named "${sn}". Check the Settings panel.`);
+      return;
+    }
+    sheetRows[sn] = readSheetRows(sourceWorkbook.Sheets[sn], headerRow, dataStart);
+  }
+
+  // row count check
+  const counts = cfgSheets.map(sn => sheetRows[sn].rows.length);
+  if(new Set(counts).size > 1){
+    setStatus('err', `The source sheets contain different numbers of data rows (${cfgSheets.map((sn,i)=>sn+'='+counts[i]).join(', ')}). Please verify the source file.`);
+    return;
+  }
+  const totalRecords = counts[0] || 0;
+  if(totalRecords === 0){ setStatus('err', `No data rows were found (checked from row ${dataStart} onward).`); return; }
+
+  // required source column check
+  for(const m of mapping){
+    if(m.ruleType==='DIRECT' || m.ruleType==='DATE'){
+      if(!sheetRows[m.sourceSheet]){ setStatus('err', `Mapping row "${m.erpField}" references sheet "${m.sourceSheet}" which isn't in the Settings sheet list.`); return; }
+      if(findHeaderIdx(sheetRows[m.sourceSheet].headers, m.sourceField) === -1){
+        setStatus('err', `Required source column missing: "${m.sourceField}" was not found on sheet "${m.sourceSheet}" of the source file. The source file's structure may have changed.`);
+        return;
+      }
+    } else if(m.ruleType==='TEMPLATE'){
+      if(!sheetRows[m.sourceSheet]){ setStatus('err', `Mapping row "${m.erpField}" references sheet "${m.sourceSheet}" which isn't in the Settings sheet list.`); return; }
+      for(const p of extractPlaceholders(m.rule)){
+        if(findHeaderIdx(sheetRows[m.sourceSheet].headers, p) === -1){
+          setStatus('err', `Required source column missing: "${p}" (used in the Template rule for "${m.erpField}") was not found on sheet "${m.sourceSheet}".`);
+          return;
+        }
+      }
+    }
+  }
+
+  // validate HS rule table's referenced source columns exist (only if SQC Qty / SQC Unit are actually ERP columns)
+  const sqcQtyIdx = findHeaderIdx(erpHeaders, 'SQC Qty');
+  const sqcUnitIdx = findHeaderIdx(erpHeaders, 'SQC Unit');
+  const ritcIdx = findHeaderIdx(erpHeaders, 'RITC');
+  if((sqcQtyIdx!==-1 || sqcUnitIdx!==-1)){
+    if(hsRules.length===0){
+      setStatus('err','SQC Qty / SQC Unit are output columns, but the "SQC Qty & Unit rules" table has no rows. Add at least one HS Code rule.');
+      return;
+    }
+    for(const hr of hsRules){
+      if(!sheetRows[hr.sheet]){
+        setStatus('err', `HS Code rule for "${hr.hs}" references sheet "${hr.sheet}", which isn't in the Settings sheet list.`);
+        return;
+      }
+      if(findHeaderIdx(sheetRows[hr.sheet].headers, hr.field) === -1){
+        setStatus('err', `HS Code rule for "${hr.hs}" references column "${hr.field}" on sheet "${hr.sheet}", which was not found in the source file.`);
+        return;
+      }
+    }
+  }
+
+  // build rows + mandatory validation
+  const outputLines = [];
+  for(let r=0; r<totalRecords; r++){
+    const rowVals = {};
+    erpHeaders.forEach(h => rowVals[h]='');
+    for(const m of mapping){
+      let val = '';
+      if(m.ruleType==='CONSTANT') val = m.defaultValue;
+      else if(m.ruleType==='DIRECT') val = safeToString(sheetRows[m.sourceSheet].rows[r][m.sourceField]);
+      else if(m.ruleType==='DATE') val = formatDateValue(sheetRows[m.sourceSheet].rows[r][m.sourceField], m.rule);
+      else if(m.ruleType==='TEMPLATE') val = applyTemplate(m.rule, sheetRows, m.sourceSheet, r);
+      const idx = findHeaderIdx(erpHeaders, m.erpField);
+      if(idx!==-1) rowVals[erpHeaders[idx]] = val;
+    }
+
+    // HS Code -> SQC Qty / SQC Unit lookup
+    if(sqcQtyIdx!==-1 || sqcUnitIdx!==-1){
+      const ritcVal = ritcIdx!==-1 ? String(rowVals[erpHeaders[ritcIdx]]).trim() : '';
+      const hit = hsRules.find(hr => hr.hs === ritcVal);
+      if(!hit){
+        setStatus('err', `Row ${r+dataStart} of the source data:\nField: RITC / HS Code\nError: HS Code "${ritcVal}" has no matching rule in the "SQC Qty & Unit rules" table.\n\nAdd a rule for this HS code and run the conversion again. No output file was created.`);
+        addLog({time:new Date().toLocaleTimeString(), records:0, ok:false});
+        return;
+      }
+      if(sqcUnitIdx!==-1) rowVals[erpHeaders[sqcUnitIdx]] = hit.unit;
+      if(sqcQtyIdx!==-1) rowVals[erpHeaders[sqcQtyIdx]] = safeToString(sheetRows[hit.sheet].rows[r][hit.field]);
+    }
+
+    for(const m of mapping){
+      if(m.mandatory){
+        const idx = findHeaderIdx(erpHeaders, m.erpField);
+        const v = idx!==-1 ? rowVals[erpHeaders[idx]] : '';
+        if(String(v).trim()===''){
+          setStatus('err', `Row ${r+dataStart} of the source data:\nField: ${m.erpField}\nError: this is a mandatory field and it is blank.\n\nFix the source file and run the conversion again. No output file was created.`);
+          addLog({time:new Date().toLocaleTimeString(), records:0, ok:false});
+          return;
+        }
+      }
+    }
+    outputLines.push(erpHeaders.map(h => csvEscape(rowVals[h])).join(','));
+  }
+
+  const csvContent = erpHeaders.join(',') + '\r\n' + outputLines.join('\r\n') + '\r\n';
+  const baseName = sourceFileName.replace(/\.[^.]+$/, '') + suffix;
+
+  try{
+    const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = baseName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+    setStatus('ok', `Conversion completed successfully.\nRecords generated: ${totalRecords}\nOutput file: ${baseName}\n(Check your browser's Downloads folder.)`);
+    addLog({time:new Date().toLocaleTimeString(), records:totalRecords, ok:true});
+  }catch(err){
+    setStatus('err','Could not save the file: ' + (err && err.message ? err.message : String(err)));
+    addLog({time:new Date().toLocaleTimeString(), records:0, ok:false});
+  }
+});
+</script>
+</body>
+</html>
