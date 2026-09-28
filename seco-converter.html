@@ -341,6 +341,15 @@ function applyTemplate(tpl, sheetRows, srcSheet, rowIndex){
   });
   return out;
 }
+function applyTemplateResilient(tpl, srcSheet, rowIndex, getFieldValueFn){
+  const placeholders = extractPlaceholders(tpl);
+  let out = tpl;
+  placeholders.forEach(p => {
+    const val = safeToString(getFieldValueFn(srcSheet, p, rowIndex));
+    out = out.split('{'+p+'}').join(val);
+  });
+  return out;
+}
 function csvEscape(v){
   v = String(v);
   if(v.includes(',')||v.includes('"')||v.includes('\n')||v.includes('\r')) return '"'+v.replace(/"/g,'""')+'"';
@@ -387,38 +396,66 @@ document.getElementById('genBtn').addEventListener('click', async () => {
     }
   }
 
-  // load configured sheets
+  // load configured sheets - skip any that don't exist in this particular file,
+  // rather than failing outright (some vendor files merge everything into Sheet1 only)
   const sheetRows = {};
+  const loadedSheetNames = [];
+  const missingSheetNames = [];
   for(const sn of cfgSheets){
     if(!sourceWorkbook.SheetNames.includes(sn)){
-      setStatus('err', `The source file does not contain a sheet named "${sn}". Check the Settings panel.`);
-      return;
+      missingSheetNames.push(sn);
+      continue;
     }
     sheetRows[sn] = readSheetRows(sourceWorkbook.Sheets[sn], headerRow, dataStart);
+    loadedSheetNames.push(sn);
+  }
+  if(loadedSheetNames.length === 0){
+    setStatus('err', `None of the configured sheets (${cfgSheets.join(', ')}) were found in the source file. Check the Settings panel.`);
+    return;
+  }
+  const sheetFallbackNote = missingSheetNames.length > 0
+    ? `\nNote: this file had no ${missingSheetNames.join(', ')} — used ${loadedSheetNames.join(', ')} for all fields instead.`
+    : '';
+
+  // Resilient field lookup: prefer the named sheet, but if it wasn't present in
+  // this file, fall back to any other loaded sheet that has a column with the
+  // same name. This lets the same Mapping/HS rules work whether a vendor file
+  // splits data across two sheets or puts everything on Sheet1 alone.
+  function resolveFieldLocation(preferredSheet, fieldName){
+    if(sheetRows[preferredSheet] && findHeaderIdx(sheetRows[preferredSheet].headers, fieldName) !== -1){
+      return preferredSheet;
+    }
+    for(const sn of loadedSheetNames){
+      if(findHeaderIdx(sheetRows[sn].headers, fieldName) !== -1) return sn;
+    }
+    return null;
+  }
+  function getFieldValue(preferredSheet, fieldName, rowIndex){
+    const sn = resolveFieldLocation(preferredSheet, fieldName);
+    if(sn === null) return '';
+    return sheetRows[sn].rows[rowIndex][fieldName];
   }
 
-  // row count check
-  const counts = cfgSheets.map(sn => sheetRows[sn].rows.length);
+  // row count check - only across sheets that actually exist in this file
+  const counts = loadedSheetNames.map(sn => sheetRows[sn].rows.length);
   if(new Set(counts).size > 1){
-    setStatus('err', `The source sheets contain different numbers of data rows (${cfgSheets.map((sn,i)=>sn+'='+counts[i]).join(', ')}). Please verify the source file.`);
+    setStatus('err', `The source sheets contain different numbers of data rows (${loadedSheetNames.map((sn,i)=>sn+'='+counts[i]).join(', ')}). Please verify the source file.`);
     return;
   }
   const totalRecords = counts[0] || 0;
   if(totalRecords === 0){ setStatus('err', `No data rows were found (checked from row ${dataStart} onward).`); return; }
 
-  // required source column check
+  // required source column check - only fails if the column truly isn't on ANY loaded sheet
   for(const m of mapping){
     if(m.ruleType==='DIRECT' || m.ruleType==='DATE'){
-      if(!sheetRows[m.sourceSheet]){ setStatus('err', `Mapping row "${m.erpField}" references sheet "${m.sourceSheet}" which isn't in the Settings sheet list.`); return; }
-      if(findHeaderIdx(sheetRows[m.sourceSheet].headers, m.sourceField) === -1){
-        setStatus('err', `Required source column missing: "${m.sourceField}" was not found on sheet "${m.sourceSheet}" of the source file. The source file's structure may have changed.`);
+      if(resolveFieldLocation(m.sourceSheet, m.sourceField) === null){
+        setStatus('err', `Required source column missing: "${m.sourceField}" was not found on any of the source file's sheets (${loadedSheetNames.join(', ')}). The source file's structure may have changed.`);
         return;
       }
     } else if(m.ruleType==='TEMPLATE'){
-      if(!sheetRows[m.sourceSheet]){ setStatus('err', `Mapping row "${m.erpField}" references sheet "${m.sourceSheet}" which isn't in the Settings sheet list.`); return; }
       for(const p of extractPlaceholders(m.rule)){
-        if(findHeaderIdx(sheetRows[m.sourceSheet].headers, p) === -1){
-          setStatus('err', `Required source column missing: "${p}" (used in the Template rule for "${m.erpField}") was not found on sheet "${m.sourceSheet}".`);
+        if(resolveFieldLocation(m.sourceSheet, p) === null){
+          setStatus('err', `Required source column missing: "${p}" (used in the Template rule for "${m.erpField}") was not found on any of the source file's sheets (${loadedSheetNames.join(', ')}).`);
           return;
         }
       }
@@ -435,12 +472,8 @@ document.getElementById('genBtn').addEventListener('click', async () => {
       return;
     }
     for(const hr of hsRules){
-      if(!sheetRows[hr.sheet]){
-        setStatus('err', `HS Code rule for "${hr.hs}" references sheet "${hr.sheet}", which isn't in the Settings sheet list.`);
-        return;
-      }
-      if(findHeaderIdx(sheetRows[hr.sheet].headers, hr.field) === -1){
-        setStatus('err', `HS Code rule for "${hr.hs}" references column "${hr.field}" on sheet "${hr.sheet}", which was not found in the source file.`);
+      if(resolveFieldLocation(hr.sheet, hr.field) === null){
+        setStatus('err', `HS Code rule for "${hr.hs}" references column "${hr.field}", which was not found on any of the source file's sheets (${loadedSheetNames.join(', ')}).`);
         return;
       }
     }
@@ -454,9 +487,9 @@ document.getElementById('genBtn').addEventListener('click', async () => {
     for(const m of mapping){
       let val = '';
       if(m.ruleType==='CONSTANT') val = m.defaultValue;
-      else if(m.ruleType==='DIRECT') val = safeToString(sheetRows[m.sourceSheet].rows[r][m.sourceField]);
-      else if(m.ruleType==='DATE') val = formatDateValue(sheetRows[m.sourceSheet].rows[r][m.sourceField], m.rule);
-      else if(m.ruleType==='TEMPLATE') val = applyTemplate(m.rule, sheetRows, m.sourceSheet, r);
+      else if(m.ruleType==='DIRECT') val = safeToString(getFieldValue(m.sourceSheet, m.sourceField, r));
+      else if(m.ruleType==='DATE') val = formatDateValue(getFieldValue(m.sourceSheet, m.sourceField, r), m.rule);
+      else if(m.ruleType==='TEMPLATE') val = applyTemplateResilient(m.rule, m.sourceSheet, r, getFieldValue);
       const idx = findHeaderIdx(erpHeaders, m.erpField);
       if(idx!==-1) rowVals[erpHeaders[idx]] = val;
     }
@@ -471,7 +504,7 @@ document.getElementById('genBtn').addEventListener('click', async () => {
         return;
       }
       if(sqcUnitIdx!==-1) rowVals[erpHeaders[sqcUnitIdx]] = hit.unit;
-      if(sqcQtyIdx!==-1) rowVals[erpHeaders[sqcQtyIdx]] = safeToString(sheetRows[hit.sheet].rows[r][hit.field]);
+      if(sqcQtyIdx!==-1) rowVals[erpHeaders[sqcQtyIdx]] = safeToString(getFieldValue(hit.sheet, hit.field, r));
     }
 
     for(const m of mapping){
@@ -502,7 +535,7 @@ document.getElementById('genBtn').addEventListener('click', async () => {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-    setStatus('ok', `Conversion completed successfully.\nRecords generated: ${totalRecords}\nOutput file: ${baseName}\n(Check your browser's Downloads folder.)`);
+    setStatus('ok', `Conversion completed successfully.\nRecords generated: ${totalRecords}\nOutput file: ${baseName}\n(Check your browser's Downloads folder.)${sheetFallbackNote}`);
     addLog({time:new Date().toLocaleTimeString(), records:totalRecords, ok:true});
   }catch(err){
     setStatus('err','Could not save the file: ' + (err && err.message ? err.message : String(err)));
