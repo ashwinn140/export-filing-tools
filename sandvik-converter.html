@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     --bg: #F3F5F6;
@@ -393,8 +394,13 @@
   </header>
 
   <section class="card">
-    <h2><span class="n">1</span>Paste invoice text</h2>
-    <p class="hint">Copy the text out of the export invoice PDF (select all on the item pages, or use your PDF viewer's "copy text") and paste it below, then parse. Every parsed row lands in an editable table in step 3 — fix anything the parser gets wrong there before generating the CSV.</p>
+    <h2><span class="n">1</span>Paste invoice text — or upload the PDF</h2>
+    <p class="hint">Copy the text out of the export invoice PDF (select all on the item pages, or use your PDF viewer's "copy text") and paste it below, then parse. Or upload the PDF directly and it fills the box for you — either way, every parsed row lands in an editable table in step 3, so fix anything the parser gets wrong there before generating the CSV.</p>
+    <div class="btn-row" style="margin-top:0;margin-bottom:10px;">
+      <button class="ghost" id="pdfUploadBtn" type="button">📄 Upload PDF instead</button>
+      <input type="file" id="pdfFileInput" accept="application/pdf" style="display:none;">
+      <span class="status" id="pdfStatus"></span>
+    </div>
     <textarea id="rawText" class="paste mono" placeholder="Paste the invoice text here…"></textarea>
     <div class="btn-row">
       <button class="primary" id="parseBtn">Parse invoice text</button>
@@ -609,6 +615,14 @@
       if (isKnown || isPlausibleShape) {
         return { articleCode: tokens.slice(0, -1).join(" "), dlyCode: last };
       }
+      return { articleCode: codeSpan, dlyCode: "" };
+    }
+    // single token: a known Dly Code may be glued directly onto the article code
+    // with no separating space at all (seen from pdf.js text extraction)
+    for (const code of knownList) {
+      if (codeSpan.endsWith(code) && codeSpan.length > code.length) {
+        return { articleCode: codeSpan.slice(0, -code.length), dlyCode: code };
+      }
     }
     return { articleCode: codeSpan, dlyCode: "" };
   }
@@ -676,25 +690,32 @@
           flagged: glued
         };
         i++;
-        // a page break drops the whole masthead before the real content resumes
-        i = skipPageBreak(lines, i);
-        // the product-name line normally comes immediately after the item row
-        if (i < lines.length && !itemRe.test(lines[i]) && !gluedItemRe.test(lines[i]) && !headerRe.test(lines[i]) && !/^brand\s*:/i.test(lines[i]) && !/^blank\s*no\b/i.test(lines[i])) {
-          item.productName = lines[i]; i++;
-        }
-        i = skipPageBreak(lines, i);
-        // an optional blank/batch-no line normally comes right after that
-        if (i < lines.length && /^blank\s*no\b/i.test(lines[i])) {
-          item.blankNo = lines[i]; i++;
-        }
-        // then scan forward for "Brand:", silently skipping any page-break
-        // masthead boilerplate that a page break inserted before it
-        while (i < lines.length && !itemRe.test(lines[i]) && !gluedItemRe.test(lines[i]) && !headerRe.test(lines[i])) {
-          i = skipPageBreak(lines, i);
-          if (i >= lines.length) break;
-          if (/^brand\s*:/i.test(lines[i])) { item.brandLine = lines[i].replace(/^brand/i, "Brand"); i++; break; }
+        // Accumulate every line up to "Brand:" into the product name/remarks —
+        // an item can have more than one description/remark line (e.g. a pricing
+        // note), and dropping anything past the first line loses real invoice
+        // text. Page breaks still only contribute their masthead to skip, never
+        // to the accumulated content; "Blank No" lines are captured separately.
+        const nameParts = [];
+        while (i < lines.length) {
+          if (pageMarkerRe.test(lines[i])) {
+            i = skipPageBreak(lines, i);
+            continue;
+          }
+          if (itemRe.test(lines[i]) || gluedItemRe.test(lines[i]) || headerRe.test(lines[i])) break;
+          if (/^brand\s*:/i.test(lines[i])) {
+            item.brandLine = lines[i].replace(/^brand/i, "Brand");
+            i++;
+            break;
+          }
+          if (/^blank\s*no\b/i.test(lines[i]) && !item.blankNo) {
+            item.blankNo = lines[i];
+            i++;
+            continue;
+          }
+          nameParts.push(lines[i]);
           i++;
         }
+        item.productName = nameParts.join(" ").trim();
         parsed.push(item);
         continue;
       }
@@ -947,13 +968,15 @@
   }
 
   // ---------- Wiring ----------
-  document.getElementById("parseBtn").addEventListener("click", () => {
+  function runParse() {
     const text = document.getElementById("rawText").value;
-    if (!text.trim()) { document.getElementById("parseStatus").textContent = "Paste some invoice text first."; return; }
+    const statusEl = document.getElementById("parseStatus");
+    statusEl.classList.remove("ok");
+    if (!text.trim()) { statusEl.textContent = "Paste some invoice text first."; return; }
     const knownList = (getConstants().knownDlyCodes || "").split(",").map(s => s.trim()).filter(Boolean);
     const result = parseInvoiceText(text, knownList);
     if (!result.items.length) {
-      document.getElementById("parseStatus").textContent = "No line items recognized — check the pasted text, or add rows manually below.";
+      statusEl.textContent = "No line items recognized — check the text, or add rows manually below.";
       return;
     }
     items = result.items;
@@ -962,10 +985,82 @@
     if (result.endUseGuess) setConstant("endUse", result.endUseGuess);
     if (result.lutGuess) setConstant("igstPayStatus", "LUT");
     renderTable();
-    const statusEl = document.getElementById("parseStatus");
     statusEl.textContent = "Parsed " + result.items.length + " line item" + (result.items.length === 1 ? "" : "s") + " — review below.";
     statusEl.classList.add("ok");
+  }
+
+  // ---------- PDF upload (additive; only ever fills the paste box above) ----------
+  // Reconstructs line-based text from pdf.js text items by clustering items whose
+  // y-position falls within a small tolerance of each other into one line, then
+  // ordering lines top-to-bottom — this approximates the same layout a person's
+  // own "copy text" would produce. A tolerance (not exact rounding) matters:
+  // fragments on the same visual line can differ by a fraction of a unit and land
+  // on opposite sides of a rounding boundary otherwise, splitting one row in two.
+  const PDF_LINE_Y_TOLERANCE = 2;
+
+  async function extractTextFromPdf(arrayBuffer) {
+    if (typeof pdfjsLib === "undefined") {
+      throw new Error("PDF library did not load");
+    }
+    if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = "";
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+      const sorted = content.items.slice().sort((a, b) => b.transform[5] - a.transform[5]);
+      const lines = [];
+      let current = null;
+      sorted.forEach(item => {
+        const y = item.transform[5];
+        if (current && Math.abs(y - current.refY) <= PDF_LINE_Y_TOLERANCE) {
+          current.items.push(item);
+        } else {
+          current = { refY: y, items: [item] };
+          lines.push(current);
+        }
+      });
+      lines.forEach(line => {
+        const lineItems = line.items.slice().sort((a, b) => a.transform[4] - b.transform[4]);
+        const lineText = lineItems.map(it => it.str).join(" ").replace(/\s+/g, " ").trim();
+        if (lineText) fullText += lineText + "\n";
+      });
+    }
+    return fullText;
+  }
+
+  document.getElementById("pdfUploadBtn").addEventListener("click", () => {
+    document.getElementById("pdfFileInput").click();
   });
+
+  document.getElementById("pdfFileInput").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    const pdfStatusEl = document.getElementById("pdfStatus");
+    if (!file) return;
+    pdfStatusEl.textContent = "Extracting text from PDF…";
+    pdfStatusEl.classList.remove("ok");
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const text = await extractTextFromPdf(arrayBuffer);
+      if (!text.trim()) {
+        pdfStatusEl.textContent = "Couldn't find any text in that PDF (it may be a scanned image) — try pasting manually instead.";
+        return;
+      }
+      document.getElementById("rawText").value = text;
+      pdfStatusEl.textContent = "Extracted text from the PDF — parsing…";
+      pdfStatusEl.classList.add("ok");
+      runParse();
+    } catch (err) {
+      pdfStatusEl.textContent = "Couldn't read that PDF automatically — paste the invoice text manually instead.";
+      console.error("PDF extraction failed:", err);
+    } finally {
+      e.target.value = ""; // allow re-selecting the same file later
+    }
+  });
+
+  document.getElementById("parseBtn").addEventListener("click", runParse);
 
   document.getElementById("clearBtn").addEventListener("click", () => {
     document.getElementById("rawText").value = "";
